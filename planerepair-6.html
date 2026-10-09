@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>航空零件检修 - 信号检测论实验</title>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; color: #e0e0e0; }
+.container { background: #2a2a2a; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 850px; text-align: center; border: 1px solid #444; }
+h1 { color: #58a6ff; margin-top: 0; font-size: 24px; }
+.subtitle { color: #8b949e; font-size: 14px; margin-bottom: 25px; line-height: 1.6; }
+.intro-screen { display: block; text-align: left; background: #1a1a1a; padding: 40px; border-radius: 12px; border: 2px solid #58a6ff; line-height: 2.0; font-size: 16px; }
+.intro-screen h1 { text-align: center; color: #58a6ff; font-size: 26px; margin-bottom: 30px; }
+.intro-screen p { margin: 14px 0; color: #c9d1d9; }
+.intro-screen .highlight { color: #f1c40f; font-weight: bold; }
+.intro-screen .danger { color: #f85149; font-weight: bold; }
+.start-btn { display: block; margin: 40px auto 0; padding: 18px 60px; background: #238636; color: white; border: none; border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer; transition: 0.2s; letter-spacing: 2px; }
+.start-btn:hover { background: #2ea043; transform: scale(1.05); }
+.experiment-screen { display: none; }
+.top-panel { display: flex; justify-content: space-between; align-items: center; background: #333; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #444; }
+.stats { font-size: 15px; font-weight: bold; color: #58a6ff; }
+.timer { font-size: 15px; font-weight: bold; color: #f1c40f; }
+.difficulty-display { font-size: 15px; font-weight: bold; color: #a371f7; }
+.part-display { background: #111; height: 420px; display: flex; justify-content: center; align-items: center; border-radius: 8px; margin-bottom: 25px; position: relative; overflow: hidden; border: 3px solid #444; }
+.parts-container { width: 100%; height: 100%; position: relative; overflow: hidden; }
+.part-svg { position: absolute; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.7)); }
+.part-fill { fill: #2c2c2c; stroke: #4a4a4a; stroke-width: 1.5; stroke-linejoin: round; }
+.controls button { padding: 15px 40px; margin: 0 10px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold; letter-spacing: 1px; }
+.btn-repair { background-color: #da3633; color: white; }
+.btn-pass { background-color: #238636; color: white; }
+.controls button:hover { filter: brightness(1.2); transform: translateY(-2px); }
+.controls button:disabled { background-color: #444; color: #888; cursor: not-allowed; transform: none; filter: none; }
+.feedback-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 52px; font-weight: bold; opacity: 0; pointer-events: none; transition: opacity 0.2s; text-shadow: 0 0 20px rgba(0,0,0,0.9); z-index: 100; }
+.feedback-correct { color: #3fb950; }
+.feedback-wrong { color: #f85149; }
+.difficulty-panel { display: none; background: #1a1a1a; padding: 25px; border-radius: 8px; margin-top: 20px; border: 2px dashed #a371f7; text-align: center; }
+.difficulty-panel h3 { color: #a371f7; margin-top: 0; }
+.difficulty-panel p { color: #8b949e; font-size: 14px; margin-bottom: 20px; }
+.difficulty-options { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+.diff-btn { padding: 12px 25px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #e0e0e0; cursor: pointer; font-size: 14px; }
+.diff-btn:hover { border-color: #58a6ff; }
+.diff-btn.selected { background: #a371f7; color: white; border-color: #a371f7; }
+.start-new-btn { padding: 15px 50px; background: #238636; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+.result-area { display: none; text-align: left; background: #1a1a1a; padding: 25px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #58a6ff; }
+.result-area h3 { color: #58a6ff; margin-top: 0; text-align: center; margin-bottom: 20px;}
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.result-item { background: #2a2a2a; padding: 12px 15px; border-radius: 6px; font-size: 15px; display: flex; justify-content: space-between; border: 1px solid #444; }
+.highlight { font-weight: bold; color: #58a6ff; }
+.danger { color: #f85149; font-weight: bold; }
+.history-log { margin-top: 20px; font-size: 13px; color: #8b949e; max-height: 150px; overflow-y: auto; }
+.history-log p { margin: 5px 0; border-bottom: 1px dashed #333; padding-bottom: 3px;}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="intro-screen" id="intro-screen">
+    <h1>✈️ 航线检修任务简报</h1>
+    <p>你是一名航空公司的<strong>航线检修员</strong>。</p>
+    <p>每 <strong>1–3 个月</strong>，公司会对飞机进行一次例行检修。</p>
+    <p>在检修过程中，你需要在零件表面寻找<strong>真正的裂痕</strong>——它们通常<span class="highlight">边缘锐利、颜色更深</span>。</p>
+    <p>但有些零件只是<span style="color:#a371f7;">沾有油污</span>或<span style="color:#a371f7;">有些老旧</span>，看起来也很深、很乱，却并没有损坏。</p>
+    <p class="danger">⚠️ 请注意，任何一处微小的裂纹，都可能在数千米高空演变成灾难。</p>
+    <button class="start-btn" onclick="startExperiment()">开始检修</button>
+  </div>
+  <div class="experiment-screen" id="experiment-screen">
+    <h1>✈️ 航空零件检修系统</h1>
+    <div class="subtitle">任务：检测是否存在<strong>裂痕（信号）</strong>。注意油污（圆润、模糊）和老化（整体暗淡）都是干扰项。限时 3 秒。</div>
+    <div class="top-panel">
+      <div class="stats">试次进度: <span id="trial-count">0</span> / 20</div>
+      <div class="timer">倒计时: <span id="timer-display">3.0</span>s</div>
+      <div class="difficulty-display">当前 d': <span id="current-d-label">中等</span></div>
+    </div>
+    <div class="part-display" id="part-display">
+      <div class="parts-container" id="parts-container"></div>
+      <div class="feedback-overlay" id="feedback-overlay"></div>
+    </div>
+    <div class="controls" id="control-panel">
+      <button class="btn-repair" onclick="handleResponse(true)" id="btn-repair" disabled>🔧 发现裂痕，送修 (信号)</button>
+      <button class="btn-pass" onclick="handleResponse(false)" id="btn-pass" disabled>✅ 零件完好，放行 (噪音)</button>
+    </div>
+    <div class="difficulty-panel" id="difficulty-panel">
+      <h3>🎯 实验轮次结束，调节下一轮 d' 难度</h3>
+      <p>选择下一轮的辨别力 d'。d' 越大，裂痕与干扰项的视觉差异越明显。</p>
+      <div class="difficulty-options">
+        <button class="diff-btn" onclick="selectDifficulty('easy', this)">简单 (高 d')</button>
+        <button class="diff-btn selected" onclick="selectDifficulty('medium', this)">中等 (中 d')</button>
+        <button class="diff-btn" onclick="selectDifficulty('hard', this)">困难 (低 d')</button>
+        <button class="diff-btn" onclick="selectDifficulty('extreme', this)">极难 (极低 d')</button>
+      </div>
+      <button class="start-new-btn" onclick="startNewRound()">开启新一轮实验 (20试次)</button>
+    </div>
+    <div class="result-area" id="result-panel">
+      <h3>📊 累计实验数据报告</h3>
+      <div class="result-grid">
+        <div class="result-item">击中(H): <span class="highlight" id="res-h">0</span></div>
+        <div class="result-item">漏报(M): <span class="danger" id="res-m">0</span></div>
+        <div class="result-item">虚报(FA): <span class="highlight" id="res-fa">0</span></div>
+        <div class="result-item">正确拒绝(CR): <span class="highlight" id="res-cr">0</span></div>
+        <div class="result-item">命中率 P(Hit): <span class="highlight" id="res-ph">0%</span></div>
+        <div class="result-item">虚报率 P(FA): <span class="highlight" id="res-pf">0%</span></div>
+        <div class="result-item">辨别力 d': <span class="highlight" id="res-d">0</span></div>
+        <div class="result-item">判断标准 c: <span class="highlight" id="res-c">0</span></div>
+        <div class="result-item" style="grid-column: span 2; justify-content: center;">总准确率: <span class="highlight" id="res-acc" style="margin-left: 10px;">0%</span></div>
+      </div>
+      <div class="history-log" id="history-log"><p><strong>历史轮次记录:</strong></p></div>
+      <button onclick="location.reload()" style="margin-top:25px; width:100%; padding:15px; background:#238636; color:white; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:bold;">完全重置实验</button>
+    </div>
+  </div>
+</div>
+<script>
+const TRIALS_PER_ROUND = 20, TIME_LIMIT = 3000, PROB_SIGNAL = 0.4, PROB_AGING = 0.3;
+const DIFFICULTY_CONFIG = {
+  easy:   { signalOpacity: 1.0,  signalSharpness: 1.0,  noiseOpacity: 0.5,  noiseBlur: 1.0,  signalWidth: 4,   signalDirectionality: 1.0,  agingDarkness: 0.9,  agingOpacity: 0.8 },
+  medium: { signalOpacity: 0.9,  signalSharpness: 0.7,  noiseOpacity: 0.7,  noiseBlur: 0.7,  signalWidth: 3.5, signalDirectionality: 0.7,  agingDarkness: 0.7,  agingOpacity: 0.6 },
+  hard:   { signalOpacity: 0.75, signalSharpness: 0.4,  noiseOpacity: 0.85, noiseBlur: 0.4,  signalWidth: 3,   signalDirectionality: 0.4,  agingDarkness: 0.5,  agingOpacity: 0.4 },
+  extreme:{ signalOpacity: 0.6,  signalSharpness: 0.2,  noiseOpacity: 0.95, noiseBlur: 0.2,  signalWidth: 2.5, signalDirectionality: 0.15, agingDarkness: 0.35, agingOpacity: 0.25 }
+};
+const DIFFICULTY_LABELS = { easy:'简单', medium:'中等', hard:'困难', extreme:'极难' };
+let currentDifficulty = 'medium';
+const PART_SVGS = [
+  { svg: `<svg viewBox="0 0 100 100"><polygon class="part-fill" points="10,80 30,20 90,10 70,50 90,70 30,90" /></svg>` },
+  { svg: `<svg viewBox="0 0 100 100"><path class="part-fill" d="M10,50 Q20,20 50,20 L90,30 Q95,50 90,70 L50,80 Q20,80 10,50 Z" /></svg>` },
+  { svg: `<svg viewBox="0 0 100 100"><path class="part-fill" d="M20,30 L80,20 Q90,50 80,80 L20,70 Q10,50 20,30 Z" /><circle cx="35" cy="50" r="8" fill="#111" /><circle cx="65" cy="50" r="8" fill="#111" /></svg>` },
+  { svg: `<svg viewBox="0 0 100 100"><polygon class="part-fill" points="20,90 50,10 70,10 90,90 60,90 50,50 40,90" /></svg>` },
+  { svg: `<svg viewBox="0 0 100 100"><path class="part-fill" d="M10,70 L30,30 L90,30 L70,70 Z" /><line x1="30" y1="50" x2="80" y2="50" stroke="#111" stroke-width="2" /><line x1="20" y1="60" x2="75" y2="60" stroke="#111" stroke-width="2" /><line x1="40" y1="40" x2="85" y2="40" stroke="#111" stroke-width="2" /></svg>` },
+  { svg: `<svg viewBox="0 0 100 100"><path class="part-fill" d="M20,20 L80,30 L80,50 L20,40 Z" /><path class="part-fill" d="M30,40 L70,40 L70,80 L30,80 Z" /><circle cx="50" cy="60" r="5" fill="#111" /></svg>` },
+  { svg: `<svg viewBox="0 0 100 100"><circle class="part-fill" cx="50" cy="50" r="30" /><circle cx="50" cy="50" r="10" fill="#111" /><line x1="50" y1="20" x2="50" y2="80" stroke="#111" stroke-width="3" /><line x1="20" y1="50" x2="80" y2="50" stroke="#111" stroke-width="3" /></svg>` },
+  { svg: `<svg viewBox="0 0 100 100"><path class="part-fill" d="M20,20 L80,20 L80,80 L20,80 Z" /><path class="part-fill" d="M30,30 L50,30 L50,50 L30,50 Z" fill="#111" /><path class="part-fill" d="M60,50 L70,50 L70,70 L60,70 Z" fill="#111" /><line x1="20" y1="50" x2="80" y2="50" stroke="#111" stroke-width="2" /><line x1="50" y1="20" x2="50" y2="80" stroke="#111" stroke-width="2" /></svg>` }
+];
+let currentTrial = 0, isSignalPresent = false, isAgingPresent = false;
+let results = { h:0, m:0, fa:0, cr:0 };
+let roundResults = [], timerInterval = null, timeLeft = TIME_LIMIT, isAnswered = false, roundNumber = 1, placedParts = [];
+const partsContainer = document.getElementById('parts-container');
+const trialCountDisplay = document.getElementById('trial-count');
+const timerDisplay = document.getElementById('timer-display');
+const resultPanel = document.getElementById('result-panel');
+const difficultyPanel = document.getElementById('difficulty-panel');
+const btnRepair = document.getElementById('btn-repair');
+const btnPass = document.getElementById('btn-pass');
+const feedbackOverlay = document.getElementById('feedback-overlay');
+const currentDLabel = document.getElementById('current-d-label');
+
+function zScore(p, totalTrials) {
+  if (p === 0) p = 1 / (2 * totalTrials);
+  if (p === 1) p = 1 - 1 / (2 * totalTrials);
+  const a1=-3.969683028665376e+01,a2=2.209460984245205e+02,a3=-2.759285104469687e+02,a4=1.383577518672690e+02,a5=-3.066479806614716e+01,a6=2.506628277459239e+00;
+  const b1=-5.447609879822406e+01,b2=1.615858368580409e+02,b3=-1.556989798598866e+02,b4=6.680131188771972e+01,b5=-1.328068155288572e+01;
+  const c1=-7.784894002430293e-03,c2=-3.223964580411365e-01,c3=-2.400758277161838e+00,c4=-2.549732539343734e+00,c5=4.374664141464968e+00,c6=2.938163982698783e+00;
+  const d1=7.784695709041462e-03,d2=3.224671290700398e-01,d3=2.445134137142996e+00,d4=3.754408661907416e+00;
+  const p_low=0.02425, p_high=1-p_low; let q,r;
+  if (p < p_low) { q = Math.sqrt(-2*Math.log(p)); return (((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6)/((((d1*q+d2)*q+d3)*q+d4)*q+1); }
+  else if (p <= p_high) { q = p-0.5; r = q*q; return (((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q/(((((b1*r+b2)*r+b3)*r+b4)*r+b5)*r+1); }
+  else { q = Math.sqrt(-2*Math.log(1-p)); return -(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6)/((((d1*q+d2)*q+d3)*q+d4)*q+1); }
+}
+
+function generatePartSVG(template, isSignal, isAging, config, partId) {
+  const size = Math.random() * 60 + 90;
+  const rotation = (Math.random() * 50 - 25).toFixed(1);
+  const clipId = `clip-${partId}`, noiseGradId = `ng-${partId}`, signalGradId = `sg-${partId}`, blurId = `bl-${partId}`;
+  const innerContent = template.svg.replace(/<svg[^>]*>|<\/svg>/g, '');
+  const noiseOp = config.noiseOpacity, noiseBlur = config.noiseBlur;
+  const nX1 = 20+Math.random()*60, nY1 = 20+Math.random()*60, nX2 = 20+Math.random()*60, nY2 = 20+Math.random()*60;
+  const signalOp = config.signalOpacity, signalSharp = config.signalSharpness;
+  const signalAngle = 30 + Math.random() * 120;
+  const signalW = config.signalWidth, dir = config.signalDirectionality;
+  const edgeWidth = 2 + (1 - signalSharp) * 8;
+  const signalBlur = (1 - signalSharp) * 2;
+  const bendAmount = (1 - dir) * 30;
+  const p1 = `M0,20 L${25+(Math.random()-0.5)*bendAmount},${25+(Math.random()-0.5)*bendAmount} L${45+(Math.random()-0.5)*bendAmount},${15+(Math.random()-0.5)*bendAmount} L${65+(Math.random()-0.5)*bendAmount},${30+(Math.random()-0.5)*bendAmount} L${85+(Math.random()-0.5)*bendAmount},${20+(Math.random()-0.5)*bendAmount} L100,28`;
+  const p2 = `M0,50 L${20+(Math.random()-0.5)*bendAmount},${45+(Math.random()-0.5)*bendAmount} L${40+(Math.random()-0.5)*bendAmount},${55+(Math.random()-0.5)*bendAmount} L${60+(Math.random()-0.5)*bendAmount},${40+(Math.random()-0.5)*bendAmount} L${80+(Math.random()-0.5)*bendAmount},${55+(Math.random()-0.5)*bendAmount} L100,48`;
+  const p3 = `M0,80 L${30+(Math.random()-0.5)*bendAmount},${75+(Math.random()-0.5)*bendAmount} L${50+(Math.random()-0.5)*bendAmount},${85+(Math.random()-0.5)*bendAmount} L${70+(Math.random()-0.5)*bendAmount},${70+(Math.random()-0.5)*bendAmount} L${90+(Math.random()-0.5)*bendAmount},${85+(Math.random()-0.5)*bendAmount} L100,78`;
+  const agingOverlayColor = `rgba(80,80,80,${config.agingOpacity})`;
+  const agingDarkerColor = `rgba(40,40,40,${config.agingDarkness * config.agingOpacity})`;
+  let svg = `<svg class="part-svg" width="${size}" height="${size}" viewBox="0 0 100 100" style="transform: rotate(${rotation}deg);"><defs>
+    <radialGradient id="${noiseGradId}" cx="${nX1}%" cy="${nY1}%" r="60%">
+      <stop offset="0%" stop-color="rgba(15,15,15,${0.9*noiseOp})" />
+      <stop offset="${30*noiseBlur}%" stop-color="rgba(35,35,35,${0.6*noiseOp})" />
+      <stop offset="${60*noiseBlur}%" stop-color="rgba(60,60,60,${0.3*noiseOp})" />
+      <stop offset="100%" stop-color="rgba(80,80,80,0)" />
+    </radialGradient>
+    <linearGradient id="${signalGradId}" x1="0%" y1="0%" x2="100%" y2="100%" gradientTransform="rotate(${signalAngle}, 0.5, 0.5)">
+      <stop offset="0%" stop-color="rgba(0,0,0,0)" />
+      <stop offset="15%" stop-color="rgba(0,0,0,0)" />
+      <stop offset="${15+edgeWidth}%" stop-color="rgba(0,0,0,${0.95*signalOp})" />
+      <stop offset="25%" stop-color="rgba(0,0,0,${0.95*signalOp})" />
+      <stop offset="${25+edgeWidth}%" stop-color="rgba(0,0,0,0)" />
+      <stop offset="100%" stop-color="rgba(0,0,0,0)" />
+    </linearGradient>
+    <filter id="${blurId}"><feGaussianBlur stdDeviation="${signalBlur}" /></filter>
+    <clipPath id="${clipId}">${innerContent}</clipPath>
+  </defs><g>${innerContent}</g>`;
+  if (isAging) {
+    svg += `<g clip-path="url(#${clipId})"><rect x="0" y="0" width="100" height="100" fill="${agingOverlayColor}" />
+      <ellipse cx="${30+Math.random()*40}" cy="${30+Math.random()*40}" rx="${20+Math.random()*15}" ry="${15+Math.random()*10}" fill="${agingDarkerColor}" filter="url(#${blurId})" />
+      <ellipse cx="${30+Math.random()*40}" cy="${30+Math.random()*40}" rx="${15+Math.random()*10}" ry="${10+Math.random()*8}" fill="${agingDarkerColor}" filter="url(#${blurId})" /></g>`;
+  }
+  svg += `<g clip-path="url(#${clipId})"><rect x="0" y="0" width="100" height="100" fill="url(#${noiseGradId})" />
+    <ellipse cx="${nX2}" cy="${nY2}" rx="${15+Math.random()*10}" ry="${10+Math.random()*10}" fill="rgba(25,25,25,${0.5*noiseOp})" filter="url(#${blurId})" />
+    <ellipse cx="${(nX1+nX2)/2}" cy="${(nY1+nY2)/2}" rx="${8+Math.random()*8}" ry="${6+Math.random()*8}" fill="rgba(35,35,35,${0.4*noiseOp})" filter="url(#${blurId})" /></g>`;
+  if (isSignal) {
+    svg += `<g clip-path="url(#${clipId})" filter="url(#${blurId})">
+      <path d="${p1}" stroke="url(#${signalGradId})" stroke-width="${signalW}" fill="none" stroke-linecap="square" />
+      <path d="${p2}" stroke="url(#${signalGradId})" stroke-width="${signalW+0.5}" fill="none" stroke-linecap="square" />
+      <path d="${p3}" stroke="url(#${signalGradId})" stroke-width="${signalW-0.5}" fill="none" stroke-linecap="square" /></g>`;
+  }
+  svg += `</svg>`;
+  return { svg, size };
+}
+
+function placeParts(numParts, cW, cH, trialType) {
+  partsContainer.innerHTML = ''; placedParts = [];
+  const specialIdx = (trialType === 'signal' || trialType === 'aging') ? Math.floor(Math.random()*numParts) : -1;
+  const config = DIFFICULTY_CONFIG[currentDifficulty];
+  for (let i = 0; i < numParts; i++) {
+    const template = PART_SVGS[Math.floor(Math.random()*PART_SVGS.length)];
+    const isSignal = (i === specialIdx && trialType === 'signal');
+    const isAging = (i === specialIdx && trialType === 'aging');
+    const { svg, size } = generatePartSVG(template, isSignal, isAging, config, i);
+    const temp = document.createElement('div'); temp.innerHTML = svg;
+    const el = temp.firstElementChild;
+    let attempts = 0, x, y; const padding = 20;
+    const maxX = cW - size - padding, maxY = cH - size - padding;
+    while (attempts < 50) {
+      x = Math.max(padding, Math.random()*maxX);
+      y = Math.max(padding, Math.random()*maxY);
+      let overlap = false;
+      for (let p of placedParts) {
+        const dx = Math.abs(x+size/2-(p.x+p.size/2)), dy = Math.abs(y+size/2-(p.y+p.size/2));
+        if (dx < (size+p.size)/2+15 && dy < (size+p.size)/2+15) { overlap = true; break; }
+      }
+      if (!overlap) break;
+      attempts++;
+    }
+    placedParts.push({ x, y, size });
+    el.style.left = x+'px'; el.style.top = y+'px';
+    partsContainer.appendChild(el);
+  }
+}
+
+function selectDifficulty(diff, btnElement) {
+  currentDifficulty = diff;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+  btnElement.classList.add('selected');
+}
+
+function startExperiment() {
+  document.getElementById('intro-screen').style.display = 'none';
+  document.getElementById('experiment-screen').style.display = 'block';
+  currentTrial = 0; roundNumber = 1;
+  currentDLabel.innerText = DIFFICULTY_LABELS[currentDifficulty];
+  startTrial();
+}
+
+function startNewRound() {
+  difficultyPanel.style.display = 'none';
+  resultPanel.style.display = 'none';
+  document.querySelector('.part-display').style.display = 'flex';
+  document.getElementById('control-panel').style.display = 'block';
+  document.querySelector('.top-panel').style.display = 'flex';
+  currentTrial = 0; roundNumber++;
+  currentDLabel.innerText = DIFFICULTY_LABELS[currentDifficulty];
+  startTrial();
+}
+
+function startTrial() {
+  if (currentTrial >= TRIALS_PER_ROUND) { endRound(); return; }
+  currentTrial++;
+  trialCountDisplay.innerText = currentTrial;
+  isAnswered = false;
+  feedbackOverlay.style.opacity = 0;
+  const rect = partsContainer.getBoundingClientRect();
+  const cW = rect.width || 800, cH = rect.height || 420;
+  const rand = Math.random();
+  let trialType;
+  if (rand < PROB_SIGNAL) { trialType = 'signal'; isSignalPresent = true; isAgingPresent = false; }
+  else if (rand < PROB_SIGNAL + PROB_AGING) { trialType = 'aging'; isSignalPresent = false; isAgingPresent = true; }
+  else { trialType = 'noise'; isSignalPresent = false; isAgingPresent = false; }
+  const numParts = Math.floor(Math.random()*4) + 2;
+  placeParts(numParts, cW, cH, trialType);
+  timeLeft = TIME_LIMIT;
+  timerDisplay.innerText = (timeLeft/1000).toFixed(1);
+  timerDisplay.style.color = '#f1c40f';
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft -= 100;
+    timerDisplay.innerText = (timeLeft/1000).toFixed(1);
+    if (timeLeft <= 1000) timerDisplay.style.color = '#f85149';
+    if (timeLeft <= 0) { clearInterval(timerInterval); if (!isAnswered) handleResponse(false, true); }
+  }, 100);
+  btnRepair.disabled = false;
+  btnPass.disabled = false;
+}
+
+function handleResponse(userSaidSignal) {
+  if (isAnswered) return;
+  isAnswered = true;
+  clearInterval(timerInterval);
+  btnRepair.disabled = true; btnPass.disabled = true;
+  let isCorrect = false, feedbackText = '';
+  if (isSignalPresent && userSaidSignal) { results.h++; isCorrect = true; feedbackText = '✅ 正确 (击中)'; }
+  else if (isSignalPresent && !userSaidSignal) { results.m++; isCorrect = false; feedbackText = '❌ 错误 (漏报)'; }
+  else if (!isSignalPresent && userSaidSignal) { results.fa++; isCorrect = false; feedbackText = '❌ 错误 (虚报)'; }
+  else { results.cr++; isCorrect = true; feedbackText = '✅ 正确 (正确拒绝)'; }
+  feedbackOverlay.innerText = feedbackText;
+  feedbackOverlay.className = `feedback-overlay ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`;
+  feedbackOverlay.style.opacity = 1;
+  setTimeout(() => { feedbackOverlay.style.opacity = 0; startTrial(); }, 600);
+}
+
+function endRound() {
+  document.querySelector('.part-display').style.display = 'none';
+  document.getElementById('control-panel').style.display = 'none';
+  document.querySelector('.top-panel').style.display = 'none';
+  const totalSoFar = TRIALS_PER_ROUND * roundNumber;
+  const roundAcc = ((results.h + results.cr) / totalSoFar * 100).toFixed(1);
+  roundResults.push({ round: roundNumber, difficulty: DIFFICULTY_LABELS[currentDifficulty], accuracy: roundAcc });
+  difficultyPanel.style.display = 'block';
+  resultPanel.style.display = 'block';
+  updateFinalReport();
+}
+
+function updateFinalReport() {
+  const totalTrials = TRIALS_PER_ROUND * roundNumber;
+  const pHit = results.h / (results.h + results.m) || 0;
+  const pFA = results.fa / (results.fa + results.cr) || 0;
+  const accuracy = (results.h + results.cr) / totalTrials;
+  const zHit = zScore(pHit, totalTrials), zFA = zScore(pFA, totalTrials);
+  const dPrime = zHit - zFA;
+  const c = -0.5 * (zHit + zFA);
+  document.getElementById('res-h').innerText = results.h;
+  document.getElementById('res-m').innerText = results.m;
+  document.getElementById('res-fa').innerText = results.fa;
+  document.getElementById('res-cr').innerText = results.cr;
+  document.getElementById('res-ph').innerText = (pHit*100).toFixed(1)+'%';
+  document.getElementById('res-pf').innerText = (pFA*100).toFixed(1)+'%';
+  document.getElementById('res-d').innerText = dPrime.toFixed(2);
+  document.getElementById('res-c').innerText = c.toFixed(2);
+  document.getElementById('res-acc').innerText = (accuracy*100).toFixed(1)+'%';
+  let log = '<p><strong>历史轮次记录:</strong></p>';
+  roundResults.forEach(r => { log += `<p>第 ${r.round} 轮 (难度: ${r.difficulty}) - 累计准确率: ${r.accuracy}%</p>`; });
+  document.getElementById('history-log').innerHTML = log;
+}
+
+window.onload = () => {};
+</script>
+</body>
+</html>
